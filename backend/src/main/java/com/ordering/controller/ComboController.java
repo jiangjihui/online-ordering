@@ -8,6 +8,8 @@ import com.ordering.entity.ComboEntity;
 import com.ordering.entity.ComboItemEntity;
 import com.ordering.mapper.ComboItemMapper;
 import com.ordering.service.ComboService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Tag(name = "套餐管理", description = "套餐的增删改查，含套餐内菜品明细")
 @RestController
 @RequestMapping("/api/combos")
 public class ComboController {
@@ -25,6 +28,7 @@ public class ComboController {
     @Autowired
     private ComboItemMapper comboItemMapper;
 
+    @Operation(summary = "获取套餐列表", description = "公开接口，支持按状态筛选")
     @GetMapping
     public Result<List<ComboDTO>> list(@RequestParam(required = false) String status) {
         QueryWrapper<ComboEntity> wrapper = new QueryWrapper<>();
@@ -36,6 +40,7 @@ public class ComboController {
         return Result.success(dtos);
     }
 
+    @Operation(summary = "创建套餐", description = "需要 ADMIN 角色，可同时创建套餐内菜品明细")
     @PostMapping
     public Result<ComboDTO> create(@Valid @RequestBody ComboDTO dto) {
         ComboEntity entity = new ComboEntity();
@@ -60,6 +65,7 @@ public class ComboController {
         return Result.success(toDTO(entity));
     }
 
+    @Operation(summary = "更新套餐", description = "需要 ADMIN 角色，先删除旧明细再插入新明细")
     @PutMapping("/{id}")
     public Result<ComboDTO> update(@PathVariable Long id, @Valid @RequestBody ComboDTO dto) {
         ComboEntity entity = comboService.getById(id);
@@ -92,6 +98,7 @@ public class ComboController {
         return Result.success(toDTO(entity));
     }
 
+    @Operation(summary = "删除套餐", description = "需要 ADMIN 角色，同时删除关联的套餐明细")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         // Delete combo items first

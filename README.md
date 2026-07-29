@@ -102,7 +102,7 @@ online-ordering/
 
 - [使用指南](docs/usage.md) — 各端操作流程说明
 - [部署文档](docs/deployment.md) — 生产环境部署配置
-- [API 文档](docs/api.md) — REST API 接口详细说明
+- **API 文档** — 启动后端后访问 `http://localhost:8080/doc.html`（Knife4j）
 
 ## License
 

@@ -4,6 +4,8 @@ import com.ordering.common.Result;
 import com.ordering.dto.CategoryDTO;
 import com.ordering.entity.CategoryEntity;
 import com.ordering.service.CategoryService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Tag(name = "分类管理", description = "菜品分类的增删改查")
 @RestController
 @RequestMapping("/api/categories")
 public class CategoryController {
@@ -18,6 +21,7 @@ public class CategoryController {
     @Autowired
     private CategoryService categoryService;
 
+    @Operation(summary = "获取所有分类", description = "按 sortOrder 排序返回分类列表，公开接口")
     @GetMapping
     public Result<List<CategoryDTO>> list() {
         List<CategoryEntity> entities = categoryService.list();
@@ -30,6 +34,7 @@ public class CategoryController {
         return Result.success(dtos);
     }
 
+    @Operation(summary = "创建分类", description = "需要 ADMIN 角色")
     @PostMapping
     public Result<CategoryDTO> create(@Valid @RequestBody CategoryDTO dto) {
         CategoryEntity entity = new CategoryEntity();
@@ -41,6 +46,7 @@ public class CategoryController {
         return Result.success(toDTO(entity));
     }
 
+    @Operation(summary = "更新分类", description = "需要 ADMIN 角色")
     @PutMapping("/{id}")
     public Result<CategoryDTO> update(@PathVariable Long id, @Valid @RequestBody CategoryDTO dto) {
         CategoryEntity entity = categoryService.getById(id);
@@ -55,6 +61,7 @@ public class CategoryController {
         return Result.success(toDTO(entity));
     }
 
+    @Operation(summary = "删除分类", description = "需要 ADMIN 角色")
     @DeleteMapping("/{id}")
     public Result<Void> delete(@PathVariable Long id) {
         categoryService.removeById(id);

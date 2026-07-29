@@ -6,6 +6,8 @@ import com.ordering.dto.WaiterCallDTO;
 import com.ordering.entity.WaiterCallEntity;
 import com.ordering.service.WaiterCallService;
 import com.ordering.service.WebSocketService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Tag(name = "服务员呼叫", description = "顾客呼叫服务员、后厨/管理端处理呼叫")
 @RestController
 @RequestMapping("/api/waiter-calls")
 public class WaiterCallController {
@@ -26,6 +29,7 @@ public class WaiterCallController {
     @Autowired
     private WebSocketService wsService;
 
+    @Operation(summary = "获取呼叫列表", description = "需要 ADMIN/KITCHEN 角色，支持按状态筛选，按时间倒序")
     @GetMapping
     public Result<List<WaiterCallDTO>> list(@RequestParam(required = false) String status) {
         QueryWrapper<WaiterCallEntity> wrapper = new QueryWrapper<>();
@@ -38,6 +42,7 @@ public class WaiterCallController {
         return Result.success(dtos);
     }
 
+    @Operation(summary = "呼叫服务员", description = "公开接口，顾客端调用，同时通过 WebSocket 推送通知")
     @PostMapping
     public Result<WaiterCallDTO> create(@Valid @RequestBody Map<String, Object> body) {
         WaiterCallEntity entity = new WaiterCallEntity();
@@ -50,6 +55,7 @@ public class WaiterCallController {
         return Result.success(toDTO(entity));
     }
 
+    @Operation(summary = "处理呼叫", description = "需要 ADMIN/KITCHEN 角色，标记为已处理")
     @PutMapping("/{id}/handle")
     public Result<Void> handle(@PathVariable Long id) {
         waiterCallService.handleCall(id);

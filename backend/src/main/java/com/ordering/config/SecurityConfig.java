@@ -41,6 +41,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/orders", "/api/waiter-calls").permitAll()
                 .requestMatchers("/ws/**").permitAll()
                 .requestMatchers("/images/**").permitAll()
+                .requestMatchers("/doc.html", "/swagger-resources/**", "/v3/api-docs/**", "/webjars/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/categories", "/api/dishes", "/api/combos", "/api/tables").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.PUT, "/api/categories/*", "/api/dishes/*", "/api/combos/*").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/categories/*", "/api/dishes/*", "/api/combos/*", "/api/tables/*").hasRole("ADMIN")
