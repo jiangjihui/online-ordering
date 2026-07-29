@@ -20,6 +20,9 @@ frontend/dist/
 .DS_Store
 Thumbs.db
 
+# Superpowers skill
+docs/superpowers/
+
 # Env
 .env
 .env.*

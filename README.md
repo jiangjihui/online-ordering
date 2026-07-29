@@ -1,13 +1,13 @@
 # 在线点餐系统 Online Ordering System
 
-餐厅在线点餐系统，支持顾客扫码点餐、后厨看板、管理后台。
+餐厅在线点餐系统，支持顾客扫码点餐、后厨实时看板、管理后台。
 
 ## 技术栈
 
 - **后端**: Spring Boot 3.2 + Java 17 + MyBatis Plus + SQLite + Spring Security + WebSocket
 - **前端**: Vue 3 + TypeScript + Pinia + Element Plus + STOMP WebSocket
 
-## 功能
+## 功能一览
 
 ### 顾客端
 - 扫码进入点餐页面（按桌号）
@@ -27,12 +27,13 @@
 - 菜品管理：增删改查、售罄开关、上架状态、图片上传
 - 分类管理、套餐管理
 - 订单查看、清台操作
-- 餐桌管理、QR码生成
+- 餐桌管理、QR 码生成
 - 日报导出（打印菜单、导出营收）
 
 ## 快速开始
 
 ### 前置要求
+
 - Java 17+
 - Node.js 18+
 - Maven 3.8+
@@ -41,8 +42,7 @@
 
 ```bash
 cd backend
-# 确保使用 Java 17
-export JAVA_HOME=/path/to/jdk-17
+export JAVA_HOME=/path/to/jdk-17   # 确保使用 Java 17
 mvn spring-boot:run
 ```
 
@@ -83,7 +83,7 @@ online-ordering/
 │   │   ├── application.yml     # 配置文件
 │   │   ├── db/migration/       # Flyway 数据库迁移脚本
 │   │   ├── mapper/             # MyBatis XML 映射
-├── frontend/                   # Vue 3 前端（子模块）
+├── frontend/                   # Vue 3 前端
 │   ├── src/
 │   │   ├── api/                # API 调用层（axios + WebSocket）
 │   │   ├── stores/             # Pinia 状态管理
@@ -94,26 +94,15 @@ online-ordering/
 │   │   ├── components/         # 通用组件
 │   │   ├── types/              # TypeScript 类型定义
 │   │   ├── utils/              # 工具函数
+├── docs/                       # 文档
 ├── LICENSE
-├── .gitignore
 ```
 
-## API 概览
+## 更多文档
 
-| 模块 | 公开接口 | 认证接口 |
-|------|---------|---------|
-| 菜品 | GET categories/dishes/combos | POST/PUT/DELETE (ADMIN) |
-| 订单 | GET/POST orders | PUT item status (ADMIN/KITCHEN) |
-| 餐桌 | GET tables | POST/PUT/DELETE (ADMIN) |
-| 呼叫 | POST waiter-calls | GET/PUT (ADMIN/KITCHEN) |
-| 统计 | — | GET stats (ADMIN/KITCHEN) |
-
-## 环境配置
-
-前端使用 Vite 环境变量配置 API 地址：
-
-- `.env.development` — 开发环境（localhost:8080）
-- `.env.production` — 生产环境（需修改为实际部署地址）
+- [使用指南](docs/usage.md) — 各端操作流程说明
+- [部署文档](docs/deployment.md) — 生产环境部署配置
+- [API 文档](docs/api.md) — REST API 接口详细说明
 
 ## License
 
