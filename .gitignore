@@ -23,6 +23,6 @@ Thumbs.db
 # Superpowers skill
 docs/superpowers/
 
-# Env
+# Env (only exclude local overrides, keep .env.development and .env.production)
 .env
-.env.*
+.env.local
