@@ -1,0 +1,91 @@
+# KubePi 部署到 K8s 集群
+# 用法: kubectl apply -f deploy/kubernetes/kubepi.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubepi-system
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kubepi-data
+  namespace: kubepi-system
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+# 给 KubePi 创建有集群管理权限的 Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubepi
+  namespace: kubepi-system
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubepi-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: kubepi
+    namespace: kubepi-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubepi
+  namespace: kubepi-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubepi
+  template:
+    metadata:
+      labels:
+        app: kubepi
+    spec:
+      serviceAccountName: kubepi        # 使用上面创建的 Service Account
+      containers:
+        - name: kubepi
+          image: 1panel/kubepi:v1.7.2
+          ports:
+            - containerPort: 80
+          env:
+            - name: KUBEPI_SESSION_TIMEOUT
+              value: "3600"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/kubepi
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: kubepi-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubepi
+  namespace: kubepi-system
+spec:
+  type: NodePort
+  selector:
+    app: kubepi
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080

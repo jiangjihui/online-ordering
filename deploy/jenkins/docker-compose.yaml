@@ -1,0 +1,33 @@
+# Jenkins 独立部署（Docker Compose）
+# 用法: docker compose -f deploy/jenkins/docker-compose.yaml up -d
+version: '3.8'
+
+services:
+  jenkins:
+    build: .
+    container_name: jenkins
+    restart: unless-stopped
+    ports:
+      - "8888:8080"
+      - "50000:50000"
+    environment:
+      - JAVA_OPTS=-Xmx512m
+    # group_add: 将容器内用户加入 docker 组（GID 999），解决 Docker socket 权限问题
+    # 如果报权限错误，在宿主机执行 `stat -c '%g' /var/run/docker.sock` 查看实际 GID 并替换
+    group_add:
+      - "999"
+    volumes:
+      - jenkins-home:/var/jenkins_home
+      # 连接 Docker：挂载 socket + Docker CLI 已内置在镜像中
+      - /var/run/docker.sock:/var/run/docker.sock
+      # [可选] 连接 K8s：挂载 kubeconfig，让 Jenkins 能执行 kubectl
+      # 取消下面这行注释即可启用
+      # - ~/.kube/config:/home/jenkins/.kube/config:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/login"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+volumes:
+  jenkins-home:

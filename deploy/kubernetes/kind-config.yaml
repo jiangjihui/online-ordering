@@ -1,0 +1,12 @@
+# kind 集群配置（K8s in Docker）
+# 用法: kind create cluster --config deploy/kubernetes/kind-config.yaml
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: local-dev
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080   # KubePi
+        hostPort: 30080
+    labels:
+      ingress-ready: "true"
