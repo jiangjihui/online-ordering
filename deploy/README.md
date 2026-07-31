@@ -116,12 +116,16 @@ kubectl apply -f deploy/kubernetes/kubepi.yaml
 
 ### 4. 在 KubePi 中接入集群
 
-获取 kind 集群的 kubeconfig：
+获取 kind 集群的 kubeconfig，**并将 API Server 地址改为集群内部地址**：
 ```bash
-kind get kubeconfig --name local-dev
+kind get kubeconfig --name local-dev | sed 's|server: https://127.0.0.1:[0-9]*|server: https://kubernetes.default.svc|'
 ```
 
-将输出内容粘贴到 KubePi 的集群导入页面。
+> **关键说明**：`kind get kubeconfig` 默认输出的 server 是 `https://127.0.0.1:<随机端口>`，这是宿主机上映射给 kind 容器的端口。但 KubePi 的 Pod 运行在集群内部，Pod 里的 `127.0.0.1` 指向 Pod 自身，连不到 API Server，导入会报 `dial tcp 127.0.0.1:xxxxx: connect: connection refused`。
+>
+> 因此必须把 server 改成集群内部 DNS 地址 `https://kubernetes.default.svc`（kind/kubeadm 的 API Server 证书 SAN 已包含该域名，CA 与客户端证书无需改动）。kind 分配的端口是随机的，上面 sed 用 `[0-9]*` 通配，可适配任意端口。
+
+将上面命令的输出内容粘贴到 KubePi 的集群导入页面即可。
 
 ---
 

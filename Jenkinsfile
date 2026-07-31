@@ -55,19 +55,23 @@ pipeline {
         // ==================== 后端构建 ====================
         stage('Backend Build') {
             steps {
-                dir('backend') {
-                    sh """
-                        export JAVA_HOME="${JAVA_HOME}"
-                        export PATH="${JAVA_HOME}/bin:${MAVEN_HOME}/bin:\$PATH"
+                script {
+                    def jdkHome = tool name: 'JDK17', type: 'jdk'
+                    def mvnHome = tool name: 'Maven', type: 'maven'
+                    dir('backend') {
+                        sh """
+                            export JAVA_HOME='${jdkHome}'
+                            export PATH='${jdkHome}/bin:${mvnHome}/bin:\$PATH'
 
-                        echo "===== Java 版本 ====="
-                        java -version
+                            echo "===== Java 版本 ====="
+                            java -version
 
-                        echo "===== Maven 构建 ====="
-                        mvn clean package ${params.SKIP_TESTS ? '-DskipTests' : ''} \
-                            -Dmaven.test.failure.ignore=false \
-                            -B -V
-                    """
+                            echo "===== Maven 构建 ====="
+                            mvn clean package ${params.SKIP_TESTS ? '-DskipTests' : ''} \
+                                -Dmaven.test.failure.ignore=false \
+                                -B -V
+                        """
+                    }
                 }
             }
             post {
@@ -83,20 +87,23 @@ pipeline {
         // ==================== 前端构建 ====================
         stage('Frontend Build') {
             steps {
-                dir('frontend') {
-                    sh """
-                        export PATH="${NODEJS_HOME}/bin:\$PATH"
+                script {
+                    def nodeHome = tool name: 'NodeJS18', type: 'nodejs'
+                    dir('frontend') {
+                        sh """
+                            export PATH='${nodeHome}/bin:\$PATH'
 
-                        echo "===== Node 版本 ====="
-                        node -v
-                        npm -v
+                            echo "===== Node 版本 ====="
+                            node -v
+                            npm -v
 
-                        echo "===== 安装依赖 ====="
-                        npm ci --registry=https://registry.npmmirror.com
+                            echo "===== 安装依赖 ====="
+                            npm ci --registry=https://registry.npmmirror.com
 
-                        echo "===== 构建前端 ====="
-                        npm run build
-                    """
+                            echo "===== 构建前端 ====="
+                            npm run build
+                        """
+                    }
                 }
             }
             post {
@@ -242,7 +249,7 @@ EOF
 
                         // 检查后端
                         def backendStatus = sh(
-                            script: 'curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/doc.html || echo "000"',
+                            script: 'curl -s -o /dev/null -w "%{http_code}" http://host.docker.internal:8080/doc.html || echo "000"',
                             returnStdout: true
                         ).trim()
                         if (backendStatus == '200' || backendStatus == '401') {
@@ -252,7 +259,7 @@ EOF
 
                         // 检查前端
                         def frontendStatus = sh(
-                            script: 'curl -s -o /dev/null -w "%{http_code}" http://localhost:80/ || echo "000"',
+                            script: 'curl -s -o /dev/null -w "%{http_code}" http://host.docker.internal:80/ || echo "000"',
                             returnStdout: true
                         ).trim()
                         if (frontendStatus == '200') {

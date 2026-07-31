@@ -55,7 +55,7 @@ spec:
       serviceAccountName: kubepi        # 使用上面创建的 Service Account
       containers:
         - name: kubepi
-          image: 1panel/kubepi:v1.7.2
+          image: 1panel/kubepi:v2.0.0
           ports:
             - containerPort: 80
           env:

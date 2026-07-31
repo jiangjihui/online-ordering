@@ -12,10 +12,11 @@ services:
       - "50000:50000"
     environment:
       - JAVA_OPTS=-Xmx512m
-    # group_add: 将容器内用户加入 docker 组（GID 999），解决 Docker socket 权限问题
-    # 如果报权限错误，在宿主机执行 `stat -c '%g' /var/run/docker.sock` 查看实际 GID 并替换
+    # group_add: 将容器内用户加入 docker 组，解决 Docker socket 权限问题
+    # Linux 宿主机: 查看 `stat -c '%g' /var/run/docker.sock` 获取实际 GID
+    # Docker Desktop (Windows/Mac): socket 属于 root 组 (GID 0)
     group_add:
-      - "999"
+      - "0"
     volumes:
       - jenkins-home:/var/jenkins_home
       # 连接 Docker：挂载 socket + Docker CLI 已内置在镜像中
