@@ -19,6 +19,14 @@ RUN curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/s
     && chmod +x kubectl \
     && mv kubectl /usr/local/bin/
 
+# 安装 Node.js 22 LTS（前端 Vite 8 / rolldown 要求 Node >=20.19，NodeJS18 工具太旧）
+# 路径必须与 Jenkinsfile 中 def nodeHome = '/opt/node22' 保持一致
+# 如需要升级，把 latest-v22.x 换成固定版本号（如 v22.23.2）
+RUN curl -fsSL -o /tmp/node22.tar.gz https://nodejs.org/dist/latest-v22.x/node-v22.23.2-linux-x64.tar.gz \
+    && tar -xzf /tmp/node22.tar.gz -C /opt \
+    && mv /opt/node-v22.23.2-linux-x64 /opt/node22 \
+    && rm -f /tmp/node22.tar.gz
+
 # 将 jenkins 用户加入 docker 组（解决 socket 权限问题）
 # 容器内 docker 组的 GID 需要与宿主机一致，运行时通过 --group-add 解决
 USER jenkins
