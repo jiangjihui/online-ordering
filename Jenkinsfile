@@ -242,8 +242,8 @@ EOF
                     # 把 Jenkins 容器连入 deploy 阶段创建的 compose 网络，
                     # 这样健康检查可以直接用容器名（deploy-target-backend-1 / deploy-target-frontend-1）访问，
                     # 避免 host.docker.internal 在 Docker Desktop 上对不同端口转发不一致的问题
-                    NETWORK="$(basename ${DEPLOY_DIR})_default"
-                    docker network connect "$NETWORK" jenkins 2>/dev/null || echo "(jenkins 已连接到 $NETWORK，跳过)"
+                    NETWORK="\$(basename ${DEPLOY_DIR})_default"
+                    docker network connect "\$NETWORK" jenkins 2>/dev/null || echo "(jenkins 已连接到 \$NETWORK，跳过)"
                 """
             }
         }
