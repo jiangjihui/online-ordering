@@ -16,7 +16,9 @@ pipeline {
 
         // Maven 配置（按实际环境修改）
         MAVEN_HOME      = tool name: 'Maven', type: 'maven'
-        JAVA_HOME       = tool name: 'JDK17', type: 'jdk'
+        // 不再要求 JDK17 工具：容器自带 Temurin JDK 21，已能编译 java.version=17 项目。
+        // 编译出的字节码版本 61 (Java 17)，可直接运行在任何 JDK 17+ 的运行时上。
+        // JAVA_HOME 使用容器自带的环境变量（/opt/java/openjdk）
 
         // Node.js 配置
         NODEJS_HOME     = tool name: 'NodeJS18', type: 'nodejs'
@@ -56,7 +58,8 @@ pipeline {
         stage('Backend Build') {
             steps {
                 script {
-                    def jdkHome = tool name: 'JDK17', type: 'jdk'
+                    // 使用容器自带的 JDK（Temurin 21 at $JAVA_HOME），编译目标为 Java 17 字节码
+                    def jdkHome = env.JAVA_HOME ?: '/opt/java/openjdk'
                     def mvnHome = tool name: 'Maven', type: 'maven'
                     dir('backend') {
                         sh """
