@@ -4,9 +4,9 @@ pipeline {
     environment {
         // 项目配置
         PROJECT_NAME    = 'online-ordering'
-        // 镜像仓库，本地测试设为空或不推送；正式环境改为实际地址
-        IMAGE_REGISTRY  = 'registry.example.com'
-        IMAGE_PREFIX    = "${IMAGE_REGISTRY}/${PROJECT_NAME}"
+        // 镜像仓库，本地测试留空（只用本地镜像，不推不拉）；正式环境改为实际地址如 ghcr.io/myorg
+        IMAGE_REGISTRY  = ''
+        IMAGE_PREFIX    = IMAGE_REGISTRY ? "${IMAGE_REGISTRY}/${PROJECT_NAME}" : PROJECT_NAME
 
         // 镜像 Tag：使用构建号 + Git 短哈希
         IMAGE_TAG       = "${BUILD_NUMBER}-${GIT_COMMIT.take(7)}"
@@ -203,6 +203,7 @@ version: '3.8'
 services:
   backend:
     image: ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
+    pull_policy: never  # dev 环境只用本地镜像，绝不去远端拉
     ports:
       - "8080:8080"
     volumes:
@@ -216,6 +217,7 @@ services:
 
   frontend:
     image: ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
+    pull_policy: never  # dev 环境只用本地镜像
     ports:
       - "80:80"
     depends_on:

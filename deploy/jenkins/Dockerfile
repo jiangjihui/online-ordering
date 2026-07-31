@@ -11,7 +11,7 @@ RUN curl -fsSL https://download.docker.com/linux/debian/gpg -o /usr/share/keyrin
     && rm -f /etc/apt/sources.list.d/debian.sources /etc/apt/sources.list \
     && echo "deb http://deb.debian.org/debian $(. /etc/os-release && echo "$VERSION_CODENAME") main" > /etc/apt/sources.list \
     && apt-get update \
-    && apt-get install -y --no-install-recommends docker-ce-cli \
+    && apt-get install -y --no-install-recommends docker-ce-cli docker-compose-plugin \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装 kubectl（可选，启用 K8s 连接时需要）
