@@ -75,7 +75,7 @@ function saveCategory() {
   Object.assign(categoryForm, defaultForm())
 }
 
-async function deleteCategory(cat: Category, index: number) {
+async function deleteCategory(cat: Category, _index: number) {
   await menuStore.removeCategory(cat.id)
 }
 </script>

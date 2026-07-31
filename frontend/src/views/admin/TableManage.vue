@@ -111,7 +111,9 @@ async function saveTable() {
   if (editingTable.value) {
     await tableStore.updateTable({ ...tableForm })
   } else {
-    await tableStore.addTable({ ...tableForm, id: Date.now() })
+    // addTable 的入参类型是 Omit<Table,'id'>，id 由后端生成，这里去掉表单里的临时 id
+    const { id: _id, ...tableFormData } = { ...tableForm }
+    await tableStore.addTable(tableFormData)
   }
   showAddDialog.value = false
   editingTable.value = null

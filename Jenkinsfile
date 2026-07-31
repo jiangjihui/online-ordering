@@ -21,7 +21,7 @@ pipeline {
         // JAVA_HOME 使用容器自带的环境变量（/opt/java/openjdk）
 
         // Node.js 配置
-        NODEJS_HOME     = tool name: 'NodeJS18', type: 'nodejs'
+        // Vite 8 / rolldown 要求 Node >=20.19；容器内已安装 Node 22 LTS 到 /opt/node22（见 Frontend Build stage）
     }
 
     parameters {
@@ -91,7 +91,8 @@ pipeline {
         stage('Frontend Build') {
             steps {
                 script {
-                    def nodeHome = tool name: 'NodeJS18', type: 'nodejs'
+                    // Vite 8 要求 Node >=20.19；NodeJS18 工具太旧，改用容器内安装的 Node 22 LTS（/opt/node22）
+                    def nodeHome = '/opt/node22'
                     dir('frontend') {
                         sh """
                             export PATH="${nodeHome}/bin:\$PATH"

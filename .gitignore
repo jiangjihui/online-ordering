@@ -15,6 +15,7 @@ frontend/dist/
 .vscode/
 .idea/
 *.iml
+.workbuddy/
 
 # OS
 .DS_Store

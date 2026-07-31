@@ -29,12 +29,11 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useOrderStore } from '@/stores/order'
 import { useCartStore } from '@/stores/cart'
 import EmptyState from '@/components/common/EmptyState.vue'
 
-const route = useRoute()
 const router = useRouter()
 const orderStore = useOrderStore()
 const cartStore = useCartStore()

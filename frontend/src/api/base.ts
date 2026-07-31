@@ -1,4 +1,5 @@
 import axios from 'axios'
+import type { AxiosRequestConfig } from 'axios'
 import { ElMessage } from 'element-plus'
 
 const api = axios.create({
@@ -45,4 +46,12 @@ api.interceptors.response.use(
   },
 )
 
-export default api
+// 响应拦截器已在运行时把响应解包为 res.data.data（仅保留业务数据），
+// 这里覆盖 axios 的类型标注，让 api.get/post/put/delete 返回 Promise<T> 而非 AxiosResponse，
+// 避免所有调用点出现 "AxiosResponse -> X" 的类型错误。
+export default api as unknown as {
+  get<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
+  post<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
+  put<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>
+  delete<T = any>(url: string, config?: AxiosRequestConfig): Promise<T>
+}

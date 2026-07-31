@@ -141,8 +141,8 @@ const activeDishCount = computed(() => stats.value?.activeDishCount ?? 0)
 const inactiveDishCount = computed(() => menuStore.dishes.filter(d => d.status === 'inactive').length)
 const soldOutCount = computed(() => menuStore.dishes.filter(d => d.status === 'active' && d.sold_out).length)
 
-const topDishes = computed(() => {
-  const raw = stats.value?.topDishes ?? []
+const topDishes = computed<{ name: string; count: number; revenue: number }[]>(() => {
+  const raw: any[] = stats.value?.topDishes ?? []
   return raw.map((d: any) => ({
     name: d.dishName ?? d.dish_name,
     count: d.totalQuantity ?? 0,

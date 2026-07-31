@@ -35,7 +35,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useOrderStore } from '@/stores/order'
 import { useWaiterStore } from '@/stores/waiter'
 import OrderCard from '@/components/kitchen/OrderCard.vue'
