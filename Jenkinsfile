@@ -238,6 +238,12 @@ EOF
 
                     echo "===== 等待服务启动 ====="
                     sleep 10
+
+                    # 把 Jenkins 容器连入 deploy 阶段创建的 compose 网络，
+                    # 这样健康检查可以直接用容器名（deploy-target-backend-1 / deploy-target-frontend-1）访问，
+                    # 避免 host.docker.internal 在 Docker Desktop 上对不同端口转发不一致的问题
+                    NETWORK="$(basename ${DEPLOY_DIR})_default"
+                    docker network connect "$NETWORK" jenkins 2>/dev/null || echo "(jenkins 已连接到 $NETWORK，跳过)"
                 """
             }
         }
@@ -250,13 +256,17 @@ EOF
                     def waitSeconds = 10
                     def backendOk = false
                     def frontendOk = false
+                    // 用容器名直连，避免 host.docker.internal 在 Docker Desktop 上对 80/8080 转发不一致
+                    def projectName = "${DEPLOY_DIR}".tokenize('/').last()
+                    def backendHost = "${projectName}-backend-1"
+                    def frontendHost = "${projectName}-frontend-1"
 
                     for (int i = 1; i <= maxRetries; i++) {
                         echo "健康检查第 ${i}/${maxRetries} 次..."
 
                         // 检查后端
                         def backendStatus = sh(
-                            script: 'curl -s -o /dev/null -w "%{http_code}" http://host.docker.internal:8080/doc.html || echo "000"',
+                            script: "curl -s -o /dev/null -w \"%{http_code}\" http://${backendHost}:8080/doc.html || echo \"000\"",
                             returnStdout: true
                         ).trim()
                         if (backendStatus == '200' || backendStatus == '401') {
@@ -266,7 +276,7 @@ EOF
 
                         // 检查前端
                         def frontendStatus = sh(
-                            script: 'curl -s -o /dev/null -w "%{http_code}" http://host.docker.internal:80/ || echo "000"',
+                            script: "curl -s -o /dev/null -w \"%{http_code}\" http://${frontendHost}:80/ || echo \"000\"",
                             returnStdout: true
                         ).trim()
                         if (frontendStatus == '200') {
