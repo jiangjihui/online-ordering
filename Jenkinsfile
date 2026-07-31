@@ -6,7 +6,8 @@ pipeline {
         PROJECT_NAME    = 'online-ordering'
         // 镜像仓库，本地测试留空（只用本地镜像，不推不拉）；正式环境改为实际地址如 ghcr.io/myorg
         IMAGE_REGISTRY  = ''
-        IMAGE_PREFIX    = IMAGE_REGISTRY ? "${IMAGE_REGISTRY}/${PROJECT_NAME}" : PROJECT_NAME
+        // environment 块的值必须是引号字符串或函数调用，三元表达式需整体包在双引号里
+        IMAGE_PREFIX    = "${IMAGE_REGISTRY ? IMAGE_REGISTRY + '/' + PROJECT_NAME : PROJECT_NAME}"
 
         // 镜像 Tag：使用构建号 + Git 短哈希
         IMAGE_TAG       = "${BUILD_NUMBER}-${GIT_COMMIT.take(7)}"
