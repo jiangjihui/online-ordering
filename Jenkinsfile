@@ -63,8 +63,8 @@ pipeline {
                     def mvnHome = tool name: 'Maven', type: 'maven'
                     dir('backend') {
                         sh """
-                            export JAVA_HOME='${jdkHome}'
-                            export PATH='${jdkHome}/bin:${mvnHome}/bin:\$PATH'
+                            export JAVA_HOME="${jdkHome}"
+                            export PATH="${jdkHome}/bin:${mvnHome}/bin:\$PATH"
 
                             echo "===== Java 版本 ====="
                             java -version
@@ -94,7 +94,7 @@ pipeline {
                     def nodeHome = tool name: 'NodeJS18', type: 'nodejs'
                     dir('frontend') {
                         sh """
-                            export PATH='${nodeHome}/bin:\$PATH'
+                            export PATH="${nodeHome}/bin:\$PATH"
 
                             echo "===== Node 版本 ====="
                             node -v
