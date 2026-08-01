@@ -1,12 +1,35 @@
 # kind 集群配置（K8s in Docker）
 # 用法: kind create cluster --config deploy/kubernetes/kind-config.yaml
+# 端口映射说明：
+#   80/443  -> ingress-nginx controller（应用入口，前端/后端都走 Ingress 路由）
+#   30080   -> KubePi
+# 注意：extraPortMappings 只能在集群创建时配置，改动后需重建集群
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
 name: local-dev
 nodes:
   - role: control-plane
     extraPortMappings:
+      - containerPort: 80      # ingress-nginx http
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443     # ingress-nginx https
+        hostPort: 443
+        protocol: TCP
       - containerPort: 30080   # KubePi
         hostPort: 30080
+        protocol: TCP
     labels:
       ingress-ready: "true"
+containerdConfigPatches:
+  # 让集群内的镜像拉取走宿主机本地 registry（host.docker.internal:5000），
+  # 避免直连 registry.k8s.io / docker.io 被墙或太慢。
+  # 应用镜像 tag 为 localhost:5000/... 推送，集群内通过 mirror 自动转到宿主机仓库。
+  - |-
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."registry.k8s.io"]
+      endpoint = ["http://host.docker.internal:5000"]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+      endpoint = ["http://host.docker.internal:5000"]
+    [plugins."io.containerd.grpc.v1.cri".registry.mirrors."docker.io"]
+      endpoint = ["http://host.docker.internal:5000"]
+

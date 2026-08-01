@@ -1,0 +1,7 @@
+# 在线点餐应用命名空间
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: online-ordering
+  labels:
+    app: online-ordering

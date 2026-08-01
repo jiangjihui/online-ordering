@@ -1,0 +1,85 @@
+# 后端服务：Deployment + Service + PVC（SQLite 数据持久化）
+# 镜像由 Jenkins 构建并推送到本地 registry（localhost:5000），
+# kind 节点通过 containerd mirror 从宿主机拉取。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: online-ordering
+  labels:
+    app: online-ordering
+    tier: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: online-ordering
+      tier: backend
+  template:
+    metadata:
+      labels:
+        app: online-ordering
+        tier: backend
+    spec:
+      containers:
+        - name: backend
+          image: localhost:5000/online-ordering/backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          readinessProbe:
+            httpGet:
+              path: /doc.html
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /doc.html
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: backend-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: online-ordering
+spec:
+  selector:
+    app: online-ordering
+    tier: backend
+  ports:
+    - port: 8080
+      targetPort: 8080
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-data
+  namespace: online-ordering
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: standard

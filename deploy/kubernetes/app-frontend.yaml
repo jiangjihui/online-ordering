@@ -1,0 +1,49 @@
+# 前端服务：Deployment + Service
+# nginx.conf 中 proxy_pass http://backend:8080 正好对应集群内 Service 名 backend
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: online-ordering
+  labels:
+    app: online-ordering
+    tier: frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: online-ordering
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: online-ordering
+        tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: localhost:5000/online-ordering/frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: online-ordering
+spec:
+  selector:
+    app: online-ordering
+    tier: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+  type: ClusterIP

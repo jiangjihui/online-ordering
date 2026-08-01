@@ -1,0 +1,44 @@
+# Ingress：统一入口 localhost:80
+# 路由规则：/ 前端静态资源；/api、/ws、/images 反代到后端
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: online-ordering
+  namespace: online-ordering
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  # 不限定 host，任意 Host 头（localhost / host.docker.internal / IP）都可访问，方便 Jenkins 容器内健康检查
+  rules:
+    - http:
+        paths:
+          - path: /api/
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /ws
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /images/
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 8080
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

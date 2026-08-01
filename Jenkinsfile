@@ -4,8 +4,10 @@ pipeline {
     environment {
         // 项目配置
         PROJECT_NAME    = 'online-ordering'
-        // 镜像仓库，本地测试留空（只用本地镜像，不推不拉）；正式环境改为实际地址如 ghcr.io/myorg
-        IMAGE_REGISTRY  = ''
+        // 镜像仓库：本地 dev 用 localhost:5000（宿主机本地 registry:2），
+        // Jenkins 推送后，kind 节点通过 containerd mirror 从宿主机拉取。
+        // 正式环境改为实际地址如 ghcr.io/myorg。
+        IMAGE_REGISTRY  = 'localhost:5000'
         // environment 块的值必须是引号字符串或函数调用，三元表达式需整体包在双引号里
         IMAGE_PREFIX    = "${IMAGE_REGISTRY ? IMAGE_REGISTRY + '/' + PROJECT_NAME : PROJECT_NAME}"
 
@@ -151,22 +153,6 @@ pipeline {
             }
         }
 
-        // ==================== 推送镜像 ====================
-        stage('Push Images') {
-            when {
-                expression { params.PUSH_IMAGE }
-            }
-            steps {
-                echo "===== 推送镜像到仓库 ====="
-                sh """
-                    docker push ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
-                    docker push ${IMAGE_PREFIX}/backend:latest
-                    docker push ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
-                    docker push ${IMAGE_PREFIX}/frontend:latest
-                """
-            }
-        }
-
         // ==================== 部署前备份 ====================
         stage('Backup Database') {
             when {
@@ -174,117 +160,92 @@ pipeline {
             }
             steps {
                 sh """
-                    echo "===== 备份 SQLite 数据库 ====="
-                    BACKUP_FILE="ordering_backup_\$(date +%Y%m%d_%H%M%S).db"
-
-                    # 如果部署目录存在数据库文件，则备份
-                    if [ -f "${DEPLOY_DIR}/data/ordering.db" ]; then
-                        cp ${DEPLOY_DIR}/data/ordering.db ${DEPLOY_DIR}/data/\${BACKUP_FILE}
-                        echo "数据库已备份: \${BACKUP_FILE}"
-
-                        # 保留最近 5 个备份
-                        ls -t ${DEPLOY_DIR}/data/ordering_backup_*.db | tail -n +6 | xargs -r rm --
-                    else
-                        echo "未找到数据库文件，跳过备份"
-                    fi
+                    echo "===== 备份 SQLite 数据库（K8s 环境）====="
+                    echo "生产环境请用以下命令从集群备份："
+                    echo "  kubectl exec -n online-ordering deploy/backend -- sh -c 'cat /app/data/ordering.db' > ordering_backup_\$(date +%Y%m%d_%H%M%S).db"
                 """
             }
         }
 
-        // ==================== 部署 ====================
+        // ==================== 部署（K8s / kind 集群） ====================
         stage('Deploy') {
             steps {
                 sh """
-                    echo "===== 部署到 ${params.DEPLOY_ENV} 环境 ====="
+                    echo "===== 部署到 ${params.DEPLOY_ENV} 环境 (kind K8s) ====="
 
-                    # 生成 docker-compose 部署文件
-                    mkdir -p ${DEPLOY_DIR}
-                    cat > ${DEPLOY_DIR}/docker-compose.deploy.yml << 'EOF'
-version: '3.8'
-services:
-  backend:
-    image: ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
-    pull_policy: never  # dev 环境只用本地镜像，绝不去远端拉
-    ports:
-      - "8080:8080"
-    volumes:
-      - backend-data:/app/data
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD-SHELL", "wget --spider -S http://localhost:8080/ 2>&1 | grep -q 'HTTP/'"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+                    # 1. 推送镜像到本地 registry（kind 节点通过 containerd mirror 从宿主机拉取）
+                    echo "----- 推送镜像到 ${IMAGE_PREFIX} -----"
+                    docker push ${IMAGE_PREFIX}/backend:${IMAGE_TAG}
+                    docker push ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
+                    docker push ${IMAGE_PREFIX}/backend:latest
+                    docker push ${IMAGE_PREFIX}/frontend:latest
 
-  frontend:
-    image: ${IMAGE_PREFIX}/frontend:${IMAGE_TAG}
-    pull_policy: never  # dev 环境只用本地镜像
-    ports:
-      - "80:80"
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
+                    # 2. 应用 K8s 清单（幂等；首次部署会创建 namespace / PVC / Ingress）
+                    echo "----- apply K8s 清单 -----"
+                    kubectl apply -f deploy/kubernetes/app-namespace.yaml
+                    kubectl apply -f deploy/kubernetes/app-backend.yaml
+                    kubectl apply -f deploy/kubernetes/app-frontend.yaml
+                    kubectl apply -f deploy/kubernetes/app-ingress.yaml
 
-volumes:
-  backend-data:
-EOF
+                    # 3. 更新镜像 tag（滚动更新，build 号保证每次都是新镜像）
+                    echo "----- 滚动更新镜像 -----"
+                    kubectl set image deployment/backend backend=${IMAGE_PREFIX}/backend:${IMAGE_TAG} -n online-ordering
+                    kubectl set image deployment/frontend frontend=${IMAGE_PREFIX}/frontend:${IMAGE_TAG} -n online-ordering
 
-                    # 停止旧服务
-                    docker compose -f ${DEPLOY_DIR}/docker-compose.deploy.yml down || true
+                    # 4. 等待滚动完成
+                    echo "----- 等待 Deployment 就绪 -----"
+                    kubectl rollout status deployment/backend -n online-ordering --timeout=180s
+                    kubectl rollout status deployment/frontend -n online-ordering --timeout=120s
 
-                    # 启动新服务
-                    docker compose -f ${DEPLOY_DIR}/docker-compose.deploy.yml up -d
-
-                    echo "===== 等待服务启动 ====="
-                    sleep 10
-
-                    # 把 Jenkins 容器连入 deploy 阶段创建的 compose 网络，
-                    # 这样健康检查可以直接用容器名（deploy-target-backend-1 / deploy-target-frontend-1）访问，
-                    # 避免 host.docker.internal 在 Docker Desktop 上对不同端口转发不一致的问题
-                    NETWORK="\$(basename ${DEPLOY_DIR})_default"
-                    docker network connect "\$NETWORK" jenkins 2>/dev/null || echo "(jenkins 已连接到 \$NETWORK，跳过)"
+                    echo "===== 部署完成 ====="
+                    kubectl get pods -n online-ordering
                 """
             }
         }
 
-        // ==================== 健康检查 ====================
+        // ==================== 健康检查（K8s） ====================
         stage('Health Check') {
             steps {
                 script {
                     def maxRetries = 6
                     def waitSeconds = 10
-                    def backendOk = false
-                    def frontendOk = false
-                    // 用容器名直连，避免 host.docker.internal 在 Docker Desktop 上对 80/8080 转发不一致
-                    def projectName = "${DEPLOY_DIR}".tokenize('/').last()
-                    def backendHost = "${projectName}-backend-1"
-                    def frontendHost = "${projectName}-frontend-1"
+                    def podsOk = false
+                    def ingressOk = false
 
                     for (int i = 1; i <= maxRetries; i++) {
                         echo "健康检查第 ${i}/${maxRetries} 次..."
 
-                        // 检查后端
-                        def backendStatus = sh(
-                            script: "curl -s -o /dev/null -w \"%{http_code}\" http://${backendHost}:8080/doc.html || echo \"000\"",
+                        // 检查 Pod 全部 Running/Ready（主检查，走 kubectl 不依赖网络路径）
+                        def podCheck = sh(
+                            script: 'kubectl get pods -n online-ordering --no-headers 2>&1 | grep -vE "Running|Completed" | wc -l',
                             returnStdout: true
                         ).trim()
-                        if (backendStatus == '200' || backendStatus == '401') {
-                            backendOk = true
-                            echo "后端健康检查通过 (HTTP ${backendStatus})"
+                        if (podCheck == '0') {
+                            podsOk = true
+                            echo "Pod 检查通过（全部 Running）"
+                        } else {
+                            echo "尚有非 Running Pod 数量: ${podCheck}"
                         }
 
-                        // 检查前端
-                        def frontendStatus = sh(
-                            script: "curl -s -o /dev/null -w \"%{http_code}\" http://${frontendHost}:80/ || echo \"000\"",
+                        // 检查 Ingress 入口（用 Docker 网关地址访问宿主机 80，避免 host.docker.internal IPv6 问题）
+                        def ingressCheck = sh(
+                            script: '''
+                                GW=$(ip route 2>/dev/null | awk '/^default/{print $3; exit}')
+                                [ -z "$GW" ] && GW="172.21.0.1"
+                                FRONT=$(curl -s -o /dev/null -w "%{http_code}" --max-time 6 "http://$GW:80/" || echo "000")
+                                BACK=$(curl -s -o /dev/null -w "%{http_code}" --max-time 6 "http://$GW:80/doc.html" || echo "000")
+                                echo "$FRONT-$BACK"
+                            ''',
                             returnStdout: true
                         ).trim()
-                        if (frontendStatus == '200') {
-                            frontendOk = true
-                            echo "前端健康检查通过 (HTTP ${frontendStatus})"
+                        if (ingressCheck == '200-200' || ingressCheck == '200-401') {
+                            ingressOk = true
+                            echo "Ingress 检查通过 (frontend/backend: ${ingressCheck})"
+                        } else {
+                            echo "Ingress 检查未通过 (frontend-backend: ${ingressCheck})"
                         }
 
-                        if (backendOk && frontendOk) {
+                        if (podsOk && ingressOk) {
                             break
                         }
 
@@ -294,11 +255,11 @@ EOF
                         }
                     }
 
-                    if (!backendOk) {
-                        error '后端健康检查失败！请检查日志: docker logs online-ordering-backend-1'
+                    if (!podsOk) {
+                        error 'Pod 健康检查失败！请检查: kubectl get pods -n online-ordering'
                     }
-                    if (!frontendOk) {
-                        error '前端健康检查失败！请检查日志: docker logs online-ordering-frontend-1'
+                    if (!ingressOk) {
+                        error 'Ingress 健康检查失败！请检查: kubectl get ingress -n online-ordering; kubectl logs -n ingress-nginx deploy/ingress-nginx-controller'
                     }
                 }
             }
@@ -310,26 +271,27 @@ EOF
         success {
             echo """
             ========================================
-            部署成功！
+            部署成功！(K8s / kind 集群)
             ========================================
             环境:     ${params.DEPLOY_ENV}
             镜像Tag:  ${IMAGE_TAG}
             前端地址:  http://localhost:80
-            后端地址:  http://localhost:8080
-            API文档:   http://localhost:8080/doc.html
+            后端API:   http://localhost:80/api
+            API文档:   http://localhost:80/doc.html
+            KubePi:    http://localhost:30080
             ========================================
             """
         }
         failure {
             echo """
             ========================================
-            部署失败！
+            部署失败！(K8s / kind 集群)
             ========================================
             排查步骤:
             1. 查看上方构建日志定位错误
-            2. 检查容器状态: docker ps -a
-            3. 查看后端日志: docker logs <backend-container>
-            4. 查看前端日志: docker logs <frontend-container>
+            2. 检查 Pod 状态: kubectl get pods -n online-ordering
+            3. 查看后端日志: kubectl logs -n online-ordering deploy/backend
+            4. 查看前端日志: kubectl logs -n online-ordering deploy/frontend
             ========================================
             """
             // 部署失败时，如果部署了新版本，尝试回滚
